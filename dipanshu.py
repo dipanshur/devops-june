@@ -1,0 +1,1 @@
+print("He is a trainer..")
