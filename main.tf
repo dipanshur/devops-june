@@ -1,86 +1,92 @@
-resource "aws_vpc" "this" {
-    tags = {
-        Name = "tg-devops-june-terraform-vpc"
-        Environment = "devops"
+module "vpc1" {
+
+    providers = {
+      aws = aws.ue2
     }
 
-    cidr_block = "10.0.0.0/16"
-    instance_tenancy   = "default"
+    source = "./iaac"
+    batch_code = "tg-devops-june-2026"
+    vpc_cidr = "10.0.0.0/16"
+    environment = "dev"
+    public_subnet_az = "us-east-2a"
+    private_subnet_az = "us-east-2b"
+    public_subnet_cidr = "10.0.0.0/24"
+    private_subnet_cidr = "10.0.1.0/24"
+    extra_private_subnet_needed = true
+    extra_private_subnet_pool = ["10.0.16.0/24", "10.0.17.0/24"]
 
-}
-
-resource "aws_subnet" "public" {
-    vpc_id = aws_vpc.this.id
-
-    tags = {
-        Name = "tg-devops-june-terraform-public-subnet"
-        Environment = "devops"
+    ingress_rules = {
+        ssh = {
+            from_port = 22
+            to_port = 22
+            protocol = "tcp"
+            cidr_blocks = ["0.0.0.0/0"]
+        }
+        http = {
+            from_port = 80
+            to_port = 80
+            protocol = "tcp"
+            cidr_blocks = ["0.0.0.0/0"]
+        }
     }
 
-    availability_zone = "us-east-2a"
-    cidr_block = "10.0.1.0/24"
-    map_public_ip_on_launch = true
-  
-}
-
-resource "aws_subnet" "private" {
-    vpc_id = aws_vpc.this.id
-
-    tags = {
-        Name = "tg-devops-june-terraform-private-subnet"
-        Environment = "devops"
-    }
-
-    availability_zone = "us-east-2a"
-    cidr_block = "10.0.2.0/24"
-    map_public_ip_on_launch = false
-  
-}
-
-resource "aws_internet_gateway" "this" {
-    vpc_id = aws_vpc.this.id
-
-    tags = {
-        Name = "tg-devops-june-terraform-internet-gateway"
-        Environment = "devops"
-    }
-  
-}
-
-resource "aws_route_table" "public" {
-    vpc_id = aws_vpc.this.id
-
-    tags = {
-        Name = "tg-devops-june-terraform-public-route-table"
-        Environment = "devops"
-    }
-
-    route {
-        cidr_block = "0.0.0.0/0"
-        gateway_id = aws_internet_gateway.this.id
-    }
+     egress_rules = {
+        all = {
+            from_port = 0
+            to_port = 65535
+            protocol =  "-1"
+            cidr_blocks = ["0.0.0.0/0"]
+        }
+     }
 
   
 }
 
-resource "aws_route_table_association" "public" {
-    subnet_id = aws_subnet.public.id
-    route_table_id = aws_route_table.public.id
-  
-}
+module "vpc2" {
 
-resource "aws_route_table" "private" {
-    vpc_id = aws_vpc.this.id
-
-    tags = {
-        Name = "tg-devops-june-terraform-private-route-table"
-        Environment = "devops"
+    providers = {
+      aws = aws.aps1
     }
+
+    source = "./iaac"
+    batch_code = "tg-devops-june-2025"
+    vpc_cidr = "192.168.0.0/16"
+    environment = "prod"
+    public_subnet_az = "ap-south-1b"
+    private_subnet_az = "ap-south-1c"
+    public_subnet_cidr = "192.168.0.0/24"
+    private_subnet_cidr = "192.168.1.0/24"
+
+    depends_on = [ module.vpc1 ]
+
+    extra_private_subnet_needed = true
+    extra_private_subnet_pool = ["192.168.16.0/24", "192.168.17.0/24"]
+
+    ingress_rules = {
+        ssh = {
+            from_port = 22
+            to_port = 22
+            protocol = "tcp"
+            cidr_blocks = ["0.0.0.0/0"]
+        }
+        http = {
+            from_port = 80
+            to_port = 80
+            protocol = "tcp"
+            cidr_blocks = ["0.0.0.0/0"]
+        }
+    }
+
+     egress_rules = {
+        all = {
+            from_port = 0
+            to_port = 65535
+            protocol =  "-1"
+            cidr_blocks = ["0.0.0.0/0"]
+        }
+     }
+
+
   
 }
 
-resource "aws_route_table_association" "private" {
-    subnet_id = aws_subnet.private.id
-    route_table_id = aws_route_table.private.id 
-  
-}
